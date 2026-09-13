@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+venv/
+movie_platform.db
+.env
+.env.example
