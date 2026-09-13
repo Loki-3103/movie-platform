@@ -77,4 +77,4 @@ cd backend
 sqlite3 movie_platform.db "UPDATE users SET is_admin = 1 WHERE email = 'your@email.com';"
 ```
 
-Log out and back in ΓÇö an *Admin* link will appear in the navbar.
+
