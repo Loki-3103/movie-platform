@@ -67,4 +67,4 @@ backend/    FastAPI app (see backend/README.md)
 frontend/   React + Vite app (see frontend/README.md)
 ```
 
-We'll cover Docker and deployment in later modules of our conversation.
+
