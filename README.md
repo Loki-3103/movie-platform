@@ -1,5 +1,7 @@
 # Movie Discovery Platform
 
+#[App is live!](https://reel-find-pearl.vercel.app/)
+
 A full-stack movie discovery app. Browse what's trending, search any movie, and
 build a personal library of favorites and watchlist items. Movie data comes
 live from TMDb; your preferences and activity are stored locally.
