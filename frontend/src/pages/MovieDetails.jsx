@@ -5,6 +5,7 @@ import * as userService from "../services/userService";
 import { useAuth } from "../context/AuthContext";
 import MovieCarousel from "../components/MovieCarousel";
 import LoadingSpinner from "../components/LoadingSpinner";
+import ErrorMessage, { getErrorMessage } from "../components/ErrorMessage";
 
 const IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 const BACKDROP_BASE = "https://image.tmdb.org/t/p/original";
@@ -14,6 +15,8 @@ export default function MovieDetails() {
   const { user } = useAuth();
   const [movie, setMovie] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [actionError, setActionError] = useState(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isInWatchlist, setIsInWatchlist] = useState(false);
   const [myRating, setMyRating] = useState(0);
@@ -22,21 +25,34 @@ export default function MovieDetails() {
 
   useEffect(() => {
     setLoading(true);
-    movieService.getMovieDetails(id).then((res) => setMovie(res.data)).finally(() => setLoading(false));
-    userService.getMovieReviews(id).then((res) => setReviews(res.data));
+    setError(null);
+    setReviews([]);
+    setMyRating(0);
+    setIsFavorite(false);
+    setIsInWatchlist(false);
+    movieService
+      .getMovieDetails(id)
+      .then((res) => setMovie(res.data))
+      .catch((err) => setError(getErrorMessage(err)))
+      .finally(() => setLoading(false));
+
+    userService
+      .getMovieReviews(id)
+      .then((res) => setReviews(res.data))
+      .catch(() => {});
 
     if (user) {
-      userService.getFavorites().then((res) => setIsFavorite(res.data.some((f) => f.tmdb_movie_id === Number(id))));
-      userService.getWatchlist().then((res) => setIsInWatchlist(res.data.some((w) => w.tmdb_movie_id === Number(id))));
+      userService.getFavorites().then((res) => setIsFavorite(res.data.some((f) => f.tmdb_movie_id === Number(id)))).catch(() => {});
+      userService.getWatchlist().then((res) => setIsInWatchlist(res.data.some((w) => w.tmdb_movie_id === Number(id)))).catch(() => {});
       userService.getMyRatings().then((res) => {
         const existing = res.data.find((r) => r.tmdb_movie_id === Number(id));
         if (existing) setMyRating(existing.score);
-      });
+      }).catch(() => {});
     }
   }, [id, user]);
 
   if (loading) return <LoadingSpinner />;
-  if (!movie) return <p className="text-center py-20">Movie not found.</p>;
+  if (error) return <ErrorMessage message={error} />;
 
   const trailer = movie.videos?.results?.find((v) => v.type === "Trailer" && v.site === "YouTube");
   const cast = movie.credits?.cast?.slice(0, 10) || [];
@@ -45,35 +61,52 @@ export default function MovieDetails() {
 
   const movieRef = { tmdb_movie_id: movie.id, title: movie.title, poster_path: movie.poster_path };
 
-  const toggleFavorite = async () => {
-    if (isFavorite) {
-      await userService.removeFavorite(movie.id);
-    } else {
-      await userService.addFavorite(movieRef);
+  const runAction = async (action) => {
+    setActionError(null);
+    try {
+      await action();
+    } catch (err) {
+      setActionError(getErrorMessage(err));
     }
-    setIsFavorite(!isFavorite);
   };
 
-  const toggleWatchlist = async () => {
-    if (isInWatchlist) {
-      await userService.removeFromWatchlist(movie.id);
-    } else {
-      await userService.addToWatchlist(movieRef);
-    }
-    setIsInWatchlist(!isInWatchlist);
-  };
+  const toggleFavorite = () =>
+    runAction(async () => {
+      if (isFavorite) {
+        await userService.removeFavorite(movie.id);
+      } else {
+        await userService.addFavorite(movieRef);
+      }
+      setIsFavorite(!isFavorite);
+    });
 
-  const submitRating = async (score) => {
-    await userService.rateMovie(movie.id, score);
-    setMyRating(score);
-  };
+  const toggleWatchlist = () =>
+    runAction(async () => {
+      if (isInWatchlist) {
+        await userService.removeFromWatchlist(movie.id);
+      } else {
+        await userService.addToWatchlist(movieRef);
+      }
+      setIsInWatchlist(!isInWatchlist);
+    });
+
+  const submitRating = (score) =>
+    runAction(async () => {
+      await userService.rateMovie(movie.id, score);
+      setMyRating(score);
+    });
 
   const submitReview = async (e) => {
     e.preventDefault();
     if (!reviewText.trim()) return;
-    const res = await userService.writeReview(movie.id, reviewText.trim());
-    setReviews([res.data, ...reviews]);
-    setReviewText("");
+    setActionError(null);
+    try {
+      const res = await userService.writeReview(movie.id, reviewText.trim());
+      setReviews([res.data, ...reviews]);
+      setReviewText("");
+    } catch (err) {
+      setActionError(getErrorMessage(err));
+    }
   };
 
   return (
@@ -109,12 +142,14 @@ export default function MovieDetails() {
           {user && (
             <div className="flex flex-wrap items-center gap-3 mt-6">
               <button
+                type="button"
                 onClick={toggleFavorite}
                 className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${isFavorite ? "bg-accent text-base" : "bg-surface hover:bg-white/10"}`}
               >
                 {isFavorite ? "★ Favorited" : "☆ Add to Favorites"}
               </button>
               <button
+                type="button"
                 onClick={toggleWatchlist}
                 className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${isInWatchlist ? "bg-accent text-base" : "bg-surface hover:bg-white/10"}`}
               >
@@ -123,6 +158,7 @@ export default function MovieDetails() {
               <div className="flex items-center gap-1 ml-2">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                   <button
+                    type="button"
                     key={n}
                     onClick={() => submitRating(n)}
                     className={`w-6 h-6 text-xs rounded ${n <= myRating ? "bg-accent text-base font-semibold" : "bg-surface hover:bg-white/10"}`}
@@ -133,6 +169,7 @@ export default function MovieDetails() {
               </div>
             </div>
           )}
+          {actionError && <p className="mt-4 text-red-400 text-sm">{actionError}</p>}
         </div>
       </div>
 

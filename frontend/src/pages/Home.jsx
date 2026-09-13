@@ -2,28 +2,39 @@ import { useEffect, useState } from "react";
 import * as movieService from "../services/movieService";
 import MovieCarousel from "../components/MovieCarousel";
 import LoadingSpinner from "../components/LoadingSpinner";
+import ErrorMessage, { getErrorMessage } from "../components/ErrorMessage";
 import SearchBar from "../components/SearchBar";
 
 export default function Home() {
   const [data, setData] = useState({ trending: [], popular: [], topRated: [], upcoming: [] });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    Promise.all([
+    setLoading(true);
+    setError(null);
+    Promise.allSettled([
       movieService.getTrending(),
       movieService.getPopular(),
       movieService.getTopRated(),
       movieService.getUpcoming(),
-    ])
-      .then(([trending, popular, topRated, upcoming]) => {
-        setData({
-          trending: trending.data.results,
-          popular: popular.data.results,
-          topRated: topRated.data.results,
-          upcoming: upcoming.data.results,
-        });
-      })
-      .finally(() => setLoading(false));
+    ]).then((results) => {
+      const keys = ["trending", "popular", "topRated", "upcoming"];
+      const next = { trending: [], popular: [], topRated: [], upcoming: [] };
+      const failed = [];
+      results.forEach((result, i) => {
+        if (result.status === "fulfilled") {
+          next[keys[i]] = result.value.data.results;
+        } else {
+          failed.push(result.reason);
+        }
+      });
+      setData(next);
+      if (failed.length === results.length) {
+        setError(getErrorMessage(failed[0]));
+      }
+      setLoading(false);
+    });
   }, []);
 
   return (
@@ -37,6 +48,8 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-6 pb-16">
         {loading ? (
           <LoadingSpinner />
+        ) : error ? (
+          <ErrorMessage message={error} />
         ) : (
           <>
             <MovieCarousel title="Trending This Week" movies={data.trending} />
