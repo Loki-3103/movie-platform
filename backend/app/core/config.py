@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     tmdb_base_url: str
     frontend_origin: str
 
+    @property
+    def cors_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.frontend_origin.split(",") if origin.strip()]
+
     class Config:
         env_file = ".env"
 
