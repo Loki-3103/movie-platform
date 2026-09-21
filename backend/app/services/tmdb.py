@@ -53,5 +53,20 @@ async def get_movie_details(movie_id: int) -> dict:
     return await _get(f"/movie/{movie_id}", {"append_to_response": "credits,videos,similar"})
 
 
+async def discover_movies(genre_ids: list[int], page: int = 1) -> dict:
+    """Browse the catalog filtered by one or more genres.
+
+    Used as an extra candidate source for recommendations: "similar" lists can
+    only suggest movies the user has already brushed against, so genre-based
+    discovery surfaces fresh titles inside genres the user already likes.
+    """
+    params = {
+        "sort_by": "popularity.desc",
+        "with_genres": ",".join(str(g) for g in genre_ids),
+        "page": page,
+    }
+    return await _get("/discover/movie", params)
+
+
 async def get_genres() -> dict:
     return await _get("/genre/movie/list")
