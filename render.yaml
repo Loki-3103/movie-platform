@@ -12,8 +12,6 @@ services:
         fromDatabase:
           name: movie-platform-db
           property: connectionString
-      - key: PYTHON_VERSION
-        value: "3.12.11"
       - key: SECRET_KEY
         generateValue: true
       - key: ALGORITHM
