@@ -38,15 +38,6 @@ class RatingResponse(BaseModel):
         from_attributes = True
 
 
-class RatingWithRecommendationsResponse(RatingResponse):
-    """Returned by POST /api/ratings: the saved rating plus a fresh batch of
-    recommendations sized by the score (5 movies when the rating is above 5,
-    2 movies when it is 5 or below). The count is variable on purpose so the
-    UI renders it dynamically without needing special cases."""
-
-    recommendations: list[dict] = []
-
-
 class ReviewRequest(BaseModel):
     tmdb_movie_id: int
     content: str

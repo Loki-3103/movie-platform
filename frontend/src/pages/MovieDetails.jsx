@@ -4,7 +4,6 @@ import * as movieService from "../services/movieService";
 import * as userService from "../services/userService";
 import { useAuth } from "../context/AuthContext";
 import MovieCarousel from "../components/MovieCarousel";
-import MovieGrid from "../components/MovieGrid";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ErrorMessage, { getErrorMessage } from "../components/ErrorMessage";
 
@@ -23,17 +22,12 @@ export default function MovieDetails() {
   const [myRating, setMyRating] = useState(0);
   const [reviews, setReviews] = useState([]);
   const [reviewText, setReviewText] = useState("");
-  // Post-rating recommendations returned by the server when the user rates.
-  // The length is variable on purpose (5 for liked, 2 for disliked), so this
-  // array is simply rendered as-is without any count-specific logic.
-  const [ratingRecs, setRatingRecs] = useState([]);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
     setReviews([]);
     setMyRating(0);
-    setRatingRecs([]);
     setIsFavorite(false);
     setIsInWatchlist(false);
     movieService
@@ -98,12 +92,8 @@ export default function MovieDetails() {
 
   const submitRating = (score) =>
     runAction(async () => {
-      // The server decides the recommendation count from the score and
-      // includes it in the rating response; we just surface whatever it sent
-      // so 5 or 2 movies both render without any client-side special cases.
-      const res = await userService.rateMovie(movie.id, score);
+      await userService.rateMovie(movie.id, score);
       setMyRating(score);
-      setRatingRecs(res.data.recommendations || []);
     });
 
   const submitReview = async (e) => {
@@ -244,15 +234,6 @@ export default function MovieDetails() {
         </section>
 
         <MovieCarousel title="Similar Movies" movies={similar} />
-
-        {user && ratingRecs.length > 0 && (
-          <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-4">
-              Because you rated {movie.title} {myRating}/10
-            </h2>
-            <MovieGrid movies={ratingRecs} />
-          </section>
-        )}
       </div>
     </div>
   );
